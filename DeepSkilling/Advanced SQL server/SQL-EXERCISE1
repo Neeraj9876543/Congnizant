@@ -1,1 +1,427 @@
+/* =====================================================
+   ONLINE RETAIL STORE - ADVANCED SQL EXERCISES
+   ===================================================== */
 
+/* =====================================================
+   DROP TABLES IF THEY EXIST
+   ===================================================== */
+
+IF OBJECT_ID('OrderDetails', 'U') IS NOT NULL DROP TABLE OrderDetails;
+IF OBJECT_ID('Orders', 'U') IS NOT NULL DROP TABLE Orders;
+IF OBJECT_ID('Products', 'U') IS NOT NULL DROP TABLE Products;
+IF OBJECT_ID('Customers', 'U') IS NOT NULL DROP TABLE Customers;
+IF OBJECT_ID('StagingProducts', 'U') IS NOT NULL DROP TABLE StagingProducts;
+
+GO
+
+/* =====================================================
+   CREATE TABLES
+   ===================================================== */
+
+CREATE TABLE Customers
+(
+    CustomerID INT PRIMARY KEY,
+    Name VARCHAR(100),
+    Region VARCHAR(50)
+);
+
+CREATE TABLE Products
+(
+    ProductID INT PRIMARY KEY,
+    ProductName VARCHAR(100),
+    Category VARCHAR(50),
+    Price DECIMAL(10,2)
+);
+
+CREATE TABLE Orders
+(
+    OrderID INT PRIMARY KEY,
+    CustomerID INT,
+    OrderDate DATE,
+    FOREIGN KEY (CustomerID)
+        REFERENCES Customers(CustomerID)
+);
+
+CREATE TABLE OrderDetails
+(
+    OrderDetailID INT PRIMARY KEY,
+    OrderID INT,
+    ProductID INT,
+    Quantity INT,
+    FOREIGN KEY (OrderID)
+        REFERENCES Orders(OrderID),
+    FOREIGN KEY (ProductID)
+        REFERENCES Products(ProductID)
+);
+
+GO
+
+/* =====================================================
+   INSERT SAMPLE CUSTOMERS
+   ===================================================== */
+
+INSERT INTO Customers VALUES
+(1,'Rahul','North'),
+(2,'Priya','South'),
+(3,'Arjun','East'),
+(4,'Sneha','West'),
+(5,'Kiran','North');
+
+GO
+
+/* =====================================================
+   INSERT SAMPLE PRODUCTS
+   ===================================================== */
+
+INSERT INTO Products VALUES
+(1,'Laptop A','Electronics',55000),
+(2,'Laptop B','Electronics',65000),
+(3,'Laptop C','Electronics',65000),
+(4,'Phone A','Mobiles',25000),
+(5,'Phone B','Mobiles',30000),
+(6,'Phone C','Mobiles',30000),
+(7,'Chair A','Furniture',5000),
+(8,'Chair B','Furniture',7000),
+(9,'Table A','Furniture',12000);
+
+GO
+
+/* =====================================================
+   INSERT ORDERS
+   ===================================================== */
+
+INSERT INTO Orders VALUES
+(101,1,'2025-01-05'),
+(102,1,'2025-01-10'),
+(103,1,'2025-01-15'),
+(104,1,'2025-01-20'),
+(105,2,'2025-01-07'),
+(106,2,'2025-02-11'),
+(107,3,'2025-02-15'),
+(108,4,'2025-03-05'),
+(109,5,'2025-03-10'),
+(110,5,'2025-03-20');
+
+GO
+
+/* =====================================================
+   INSERT ORDER DETAILS
+   ===================================================== */
+
+INSERT INTO OrderDetails VALUES
+(1,101,1,2),
+(2,101,4,1),
+(3,102,2,1),
+(4,103,5,3),
+(5,104,7,2),
+(6,105,3,1),
+(7,106,8,2),
+(8,107,9,1),
+(9,108,6,2),
+(10,109,5,1),
+(11,110,2,2);
+
+GO
+
+/* =====================================================
+   EXERCISE 1
+   RANKING & WINDOW FUNCTIONS
+   ===================================================== */
+
+PRINT 'EXERCISE 1 - ROW_NUMBER, RANK, DENSE_RANK';
+
+SELECT
+    ProductID,
+    ProductName,
+    Category,
+    Price,
+
+    ROW_NUMBER() OVER
+    (
+        PARTITION BY Category
+        ORDER BY Price DESC
+    ) AS RowNum,
+
+    RANK() OVER
+    (
+        PARTITION BY Category
+        ORDER BY Price DESC
+    ) AS RankNum,
+
+    DENSE_RANK() OVER
+    (
+        PARTITION BY Category
+        ORDER BY Price DESC
+    ) AS DenseRankNum
+
+FROM Products;
+
+GO
+
+PRINT 'TOP 3 PRODUCTS IN EACH CATEGORY';
+
+WITH RankedProducts AS
+(
+    SELECT *,
+           ROW_NUMBER() OVER
+           (
+               PARTITION BY Category
+               ORDER BY Price DESC
+           ) AS rn
+    FROM Products
+)
+
+SELECT *
+FROM RankedProducts
+WHERE rn <= 3;
+
+GO
+
+/* =====================================================
+   EXERCISE 2
+   GROUPING SETS
+   ===================================================== */
+
+PRINT 'EXERCISE 2 - GROUPING SETS';
+
+SELECT
+    c.Region,
+    p.Category,
+    SUM(od.Quantity) AS TotalQuantity
+FROM Orders o
+JOIN Customers c
+ON o.CustomerID = c.CustomerID
+JOIN OrderDetails od
+ON o.OrderID = od.OrderID
+JOIN Products p
+ON od.ProductID = p.ProductID
+GROUP BY GROUPING SETS
+(
+    (c.Region),
+    (p.Category),
+    (c.Region, p.Category)
+);
+
+GO
+
+/* =====================================================
+   ROLLUP
+   ===================================================== */
+
+PRINT 'ROLLUP';
+
+SELECT
+    c.Region,
+    p.Category,
+    SUM(od.Quantity) AS TotalQuantity
+FROM Orders o
+JOIN Customers c
+ON o.CustomerID = c.CustomerID
+JOIN OrderDetails od
+ON o.OrderID = od.OrderID
+JOIN Products p
+ON od.ProductID = p.ProductID
+GROUP BY ROLLUP(c.Region,p.Category);
+
+GO
+
+/* =====================================================
+   CUBE
+   ===================================================== */
+
+PRINT 'CUBE';
+
+SELECT
+    c.Region,
+    p.Category,
+    SUM(od.Quantity) AS TotalQuantity
+FROM Orders o
+JOIN Customers c
+ON o.CustomerID = c.CustomerID
+JOIN OrderDetails od
+ON o.OrderID = od.OrderID
+JOIN Products p
+ON od.ProductID = p.ProductID
+GROUP BY CUBE(c.Region,p.Category);
+
+GO
+
+/* =====================================================
+   EXERCISE 3
+   RECURSIVE CTE
+   ===================================================== */
+
+PRINT 'EXERCISE 3 - RECURSIVE CTE CALENDAR';
+
+WITH CalendarDates AS
+(
+    SELECT CAST('2025-01-01' AS DATE) AS CalendarDate
+
+    UNION ALL
+
+    SELECT DATEADD(DAY,1,CalendarDate)
+    FROM CalendarDates
+    WHERE CalendarDate < '2025-01-31'
+)
+
+SELECT *
+FROM CalendarDates
+OPTION (MAXRECURSION 31);
+
+GO
+
+/* =====================================================
+   MERGE EXAMPLE
+   ===================================================== */
+
+CREATE TABLE StagingProducts
+(
+    ProductID INT,
+    ProductName VARCHAR(100),
+    Category VARCHAR(50),
+    Price DECIMAL(10,2)
+);
+
+INSERT INTO StagingProducts VALUES
+(2,'Laptop B','Electronics',70000),
+(10,'Keyboard A','Accessories',1500),
+(11,'Mouse A','Accessories',800);
+
+GO
+
+PRINT 'MERGE OPERATION';
+
+MERGE Products AS Target
+USING StagingProducts AS Source
+
+ON Target.ProductID = Source.ProductID
+
+WHEN MATCHED THEN
+UPDATE SET
+    Target.Price = Source.Price
+
+WHEN NOT MATCHED THEN
+INSERT
+(
+    ProductID,
+    ProductName,
+    Category,
+    Price
+)
+VALUES
+(
+    Source.ProductID,
+    Source.ProductName,
+    Source.Category,
+    Source.Price
+);
+
+GO
+
+SELECT *
+FROM Products;
+
+GO
+
+/* =====================================================
+   EXERCISE 4
+   PIVOT
+   ===================================================== */
+
+PRINT 'EXERCISE 4 - PIVOT';
+
+SELECT *
+FROM
+(
+    SELECT
+        p.ProductName,
+        MONTH(o.OrderDate) AS SalesMonth,
+        od.Quantity
+    FROM Orders o
+    JOIN OrderDetails od
+        ON o.OrderID = od.OrderID
+    JOIN Products p
+        ON od.ProductID = p.ProductID
+) AS SourceData
+
+PIVOT
+(
+    SUM(Quantity)
+    FOR SalesMonth IN
+    (
+        [1],[2],[3]
+    )
+) AS PivotTable;
+
+GO
+
+/* =====================================================
+   UNPIVOT
+   ===================================================== */
+
+PRINT 'UNPIVOT';
+
+WITH PivotData AS
+(
+    SELECT *
+    FROM
+    (
+        SELECT
+            p.ProductName,
+            MONTH(o.OrderDate) AS SalesMonth,
+            od.Quantity
+        FROM Orders o
+        JOIN OrderDetails od
+            ON o.OrderID = od.OrderID
+        JOIN Products p
+            ON od.ProductID = p.ProductID
+    ) AS SourceData
+
+    PIVOT
+    (
+        SUM(Quantity)
+        FOR SalesMonth IN ([1],[2],[3])
+    ) AS P
+)
+
+SELECT *
+FROM PivotData
+
+UNPIVOT
+(
+    Quantity
+    FOR SalesMonth IN ([1],[2],[3])
+) AS U;
+
+GO
+
+/* =====================================================
+   EXERCISE 5
+   CTE - CUSTOMERS WITH MORE THAN 3 ORDERS
+   ===================================================== */
+
+PRINT 'EXERCISE 5 - CUSTOMER ORDER COUNTS';
+
+WITH CustomerOrderCounts AS
+(
+    SELECT
+        CustomerID,
+        COUNT(OrderID) AS OrderCount
+    FROM Orders
+    GROUP BY CustomerID
+)
+
+SELECT
+    c.CustomerID,
+    c.Name,
+    coc.OrderCount
+FROM CustomerOrderCounts coc
+JOIN Customers c
+ON c.CustomerID = coc.CustomerID
+WHERE coc.OrderCount > 3;
+
+GO
+
+/* =====================================================
+   END OF SCRIPT
+   ===================================================== */
