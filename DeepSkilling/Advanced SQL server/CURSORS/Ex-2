@@ -1,0 +1,285 @@
+/* =========================================================
+   EMPLOYEE MANAGEMENT SYSTEM - SQL CURSOR EXERCISES
+   Includes:
+   1. Database Creation
+   2. Table Creation
+   3. Insert Sample Data
+   4. Exercise 1 - Basic Cursor
+   5. Exercise 2 - Different Types of Cursors
+   ========================================================= */
+
+
+/* =========================================================
+   STEP 1 : CREATE DATABASE
+   Creates a new database named EmployeeManagement
+   ========================================================= */
+
+CREATE DATABASE EmployeeManagement;
+GO
+
+USE EmployeeManagement;
+GO
+
+
+/* =========================================================
+   STEP 2 : CREATE TABLE - Departments
+   Stores department information
+   ========================================================= */
+
+CREATE TABLE Departments
+(
+    DepartmentID INT PRIMARY KEY,          -- Unique department ID
+    DepartmentName VARCHAR(100)           -- Department name
+);
+GO
+
+
+/* =========================================================
+   STEP 3 : CREATE TABLE - Employees
+   Stores employee details
+   DepartmentID acts as Foreign Key
+   ========================================================= */
+
+CREATE TABLE Employees
+(
+    EmployeeID INT PRIMARY KEY,            -- Unique employee ID
+    FirstName VARCHAR(50),                -- Employee first name
+    LastName VARCHAR(50),                 -- Employee last name
+    DepartmentID INT,                     -- Department reference
+    Salary DECIMAL(10,2),                -- Monthly salary
+    JoinDate DATE,                       -- Joining date
+
+    FOREIGN KEY (DepartmentID)
+    REFERENCES Departments(DepartmentID)
+);
+GO
+
+
+/* =========================================================
+   STEP 4 : INSERT SAMPLE DATA INTO Departments TABLE
+   ========================================================= */
+
+INSERT INTO Departments VALUES
+(1, 'HR'),
+(2, 'IT'),
+(3, 'Finance');
+GO
+
+
+/* =========================================================
+   STEP 5 : INSERT SAMPLE DATA INTO Employees TABLE
+   ========================================================= */
+
+INSERT INTO Employees VALUES
+(1, 'John', 'Doe', 1, 5000.00, '2020-01-15'),
+(2, 'Jane', 'Smith', 2, 6000.00, '2019-03-22'),
+(3, 'Bob', 'Johnson', 3, 5500.00, '2021-07-30');
+GO
+
+
+/* =========================================================
+   STEP 6 : DISPLAY INSERTED DATA
+   Verify data inserted correctly
+   ========================================================= */
+
+SELECT * FROM Departments;
+SELECT * FROM Employees;
+GO
+
+
+/* =========================================================
+   EXERCISE 1 : CREATE A CURSOR
+   Goal:
+   Read employee records one by one and print details
+   ========================================================= */
+
+
+/* Declare variables to store fetched values */
+
+DECLARE @EmployeeID INT;
+DECLARE @FirstName VARCHAR(50);
+DECLARE @LastName VARCHAR(50);
+DECLARE @Salary DECIMAL(10,2);
+
+
+/* Declare cursor */
+
+DECLARE EmployeeCursor CURSOR
+FOR
+SELECT EmployeeID, FirstName, LastName, Salary
+FROM Employees;
+
+
+/* Open cursor */
+
+OPEN EmployeeCursor;
+
+
+/* Fetch first row */
+
+FETCH NEXT FROM EmployeeCursor
+INTO @EmployeeID, @FirstName, @LastName, @Salary;
+
+
+/* Loop until all rows are fetched */
+
+WHILE @@FETCH_STATUS = 0
+BEGIN
+
+    /* Print employee details */
+
+    PRINT '---------------------------';
+    PRINT 'Employee ID : ' + CAST(@EmployeeID AS VARCHAR);
+    PRINT 'Employee Name : ' + @FirstName + ' ' + @LastName;
+    PRINT 'Salary : ' + CAST(@Salary AS VARCHAR);
+
+    /* Fetch next row */
+
+    FETCH NEXT FROM EmployeeCursor
+    INTO @EmployeeID, @FirstName, @LastName, @Salary;
+
+END
+
+
+/* Close cursor */
+
+CLOSE EmployeeCursor;
+
+
+/* Remove cursor from memory */
+
+DEALLOCATE EmployeeCursor;
+GO
+/* =========================================================
+   EXERCISE 2 : TYPES OF CURSORS
+   Demonstrating 4 different cursor types
+   ========================================================= */
+
+
+
+/* =========================================================
+   A) STATIC CURSOR
+   Creates a temporary copy of data
+   Changes in table will NOT be visible
+   ========================================================= */
+
+DECLARE StaticCursor CURSOR STATIC
+FOR
+SELECT * FROM Employees;
+
+OPEN StaticCursor;
+
+PRINT 'STATIC CURSOR OPENED';
+
+
+/* Close and deallocate */
+
+CLOSE StaticCursor;
+DEALLOCATE StaticCursor;
+GO
+
+
+
+/* =========================================================
+   B) DYNAMIC CURSOR
+   Shows real-time changes made to table
+   ========================================================= */
+
+DECLARE DynamicCursor CURSOR DYNAMIC
+FOR
+SELECT * FROM Employees;
+
+OPEN DynamicCursor;
+
+PRINT 'DYNAMIC CURSOR OPENED';
+
+
+/* Close and deallocate */
+
+CLOSE DynamicCursor;
+DEALLOCATE DynamicCursor;
+GO
+
+
+
+/* =========================================================
+   C) FORWARD_ONLY CURSOR
+   Moves only in forward direction
+   Cannot move backward
+   Faster than other cursors
+   ========================================================= */
+
+DECLARE ForwardCursor CURSOR FORWARD_ONLY
+FOR
+SELECT * FROM Employees;
+
+OPEN ForwardCursor;
+
+PRINT 'FORWARD ONLY CURSOR OPENED';
+
+
+/* Close and deallocate */
+
+CLOSE ForwardCursor;
+DEALLOCATE ForwardCursor;
+GO
+
+
+
+/* =========================================================
+   D) KEYSET CURSOR
+   Keys remain fixed
+   Updates and deletes are visible
+   New inserts are NOT visible
+   ========================================================= */
+
+DECLARE KeysetCursor CURSOR KEYSET
+FOR
+SELECT * FROM Employees;
+
+OPEN KeysetCursor;
+
+PRINT 'KEYSET CURSOR OPENED';
+
+
+/* Close and deallocate */
+
+CLOSE KeysetCursor;
+DEALLOCATE KeysetCursor;
+GO
+
+
+
+/* =========================================================
+   CURSOR TYPE COMPARISON
+   (For Understanding)
+   =========================================================
+
+   STATIC CURSOR
+   - Creates copy of data
+   - No changes visible
+   - Fast performance
+
+   DYNAMIC CURSOR
+   - Real-time changes visible
+   - Slow performance
+
+   FORWARD_ONLY CURSOR
+   - Moves only forward
+   - Very fast
+
+   KEYSET CURSOR
+   - Updates and deletes visible
+   - Inserts not visible
+
+   ========================================================= */
+
+
+
+/* =========================================================
+   FINAL CHECK
+   Display all records
+   ========================================================= */
+
+SELECT * FROM Employees;
+GO
