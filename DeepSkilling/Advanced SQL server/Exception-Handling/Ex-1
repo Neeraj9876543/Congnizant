@@ -1,0 +1,142 @@
+/* =========================================================
+   SQL SERVER EXCEPTION HANDLING EXERCISES
+   EMPLOYEE MANAGEMENT SYSTEM
+
+   Includes:
+   1. Database Setup
+   2. Table Creation
+   3. Sample Data
+   4. Question 1 - TRY...CATCH Error Logging
+   5. Question 2 - THROW Re-raise Error
+   6. Question 3 - RAISERROR Custom Validation
+   7. Question 4 - Nested TRY...CATCH
+   8. Question 5 - Transaction + Rollback
+   9. Question 6 - Dynamic RAISERROR Severity
+   ========================================================= */
+
+
+/* =========================================================
+   STEP 1 : USE EXISTING DATABASE
+   (Using previous EmployeeManagement database)
+   ========================================================= */
+
+USE EmployeeManagement;
+GO
+
+
+/* =========================================================
+   STEP 2 : DROP OLD TABLES (Avoid duplicate errors)
+   ========================================================= */
+
+DROP TABLE IF EXISTS AuditLog;
+DROP TABLE IF EXISTS Employees;
+DROP TABLE IF EXISTS Departments;
+GO
+
+
+/* =========================================================
+   STEP 3 : CREATE TABLES
+   ========================================================= */
+
+
+/* Departments table */
+
+CREATE TABLE Departments
+(
+    DepartmentID INT PRIMARY KEY,
+    DepartmentName VARCHAR(100) NOT NULL
+);
+
+
+/* Employees table */
+
+CREATE TABLE Employees
+(
+    EmployeeID INT PRIMARY KEY,
+    FirstName VARCHAR(50),
+    LastName VARCHAR(50),
+    Email VARCHAR(100) UNIQUE,          -- Unique email
+    Salary DECIMAL(10,2),
+    DepartmentID INT,
+
+    FOREIGN KEY (DepartmentID)
+    REFERENCES Departments(DepartmentID)
+);
+
+
+/* Audit table for error logging */
+
+CREATE TABLE AuditLog
+(
+    LogID INT IDENTITY(1,1) PRIMARY KEY,
+    Action VARCHAR(100),
+    ErrorMessage VARCHAR(4000),
+    ActionDate DATETIME DEFAULT GETDATE()
+);
+GO
+
+
+/* =========================================================
+   STEP 4 : INSERT SAMPLE DATA
+   ========================================================= */
+
+INSERT INTO Departments VALUES
+(1,'HR'),
+(2,'IT'),
+(3,'Finance');
+
+
+INSERT INTO Employees VALUES
+(1,'John','Doe','john@gmail.com',5000,1),
+(2,'Jane','Smith','jane@gmail.com',6000,2),
+(3,'Neeraj','Smith','neeraj@gmail.com',6000,2);
+GO
+select* from Employees;
+select * from Departments;
+go
+
+/* =========================================================
+   QUESTION 1
+   BASIC TRY...CATCH FOR ERROR LOGGING
+   If duplicate email occurs → log error
+   ========================================================= */
+
+CREATE PROCEDURE AddEmployee
+(
+    @EmployeeID INT,
+    @FirstName VARCHAR(50),
+    @LastName VARCHAR(50),
+    @Email VARCHAR(100),
+    @Salary DECIMAL(10,2),
+    @DepartmentID INT
+)
+AS
+BEGIN
+    BEGIN TRY
+
+        INSERT INTO Employees
+        VALUES(@EmployeeID,@FirstName,@LastName,
+               @Email,@Salary,@DepartmentID);
+
+        PRINT 'Employee Inserted Successfully';
+
+    END TRY
+
+    BEGIN CATCH
+
+        INSERT INTO AuditLog(Action,ErrorMessage)
+        VALUES('AddEmployee',ERROR_MESSAGE());
+
+        PRINT 'Error Logged';
+
+    END CATCH
+END
+GO
+
+
+/* Test duplicate email */
+
+EXEC AddEmployee
+3,'Mike','David','john@gmail.com',4500,1;
+GO
+select * from Employees;
