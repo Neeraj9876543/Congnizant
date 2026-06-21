@@ -1,0 +1,12 @@
+DROP FUNCTION fn_CalculateBonus;
+GO
+SELECT *
+FROM sys.objects
+WHERE name = 'fn_CalculateBonus';
+GO
+SELECT
+    EmployeeID,
+    FirstName,
+    dbo.fn_CalculateAnnualSalary(Salary) AS AnnualSalary
+FROM Employees;
+GO
