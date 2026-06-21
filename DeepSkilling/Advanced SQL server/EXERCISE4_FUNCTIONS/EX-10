@@ -1,0 +1,28 @@
+ALTER FUNCTION fn_CalculateTotalCompensation
+(
+    @Salary DECIMAL(10,2)
+)
+RETURNS DECIMAL(10,2)
+AS
+BEGIN
+
+    DECLARE @AnnualSalary DECIMAL(10,2);
+    DECLARE @Bonus DECIMAL(10,2);
+
+    SET @AnnualSalary =
+        dbo.fn_CalculateAnnualSalary(@Salary);
+
+    SET @Bonus =
+        @Salary * 0.20;
+
+    RETURN @AnnualSalary + @Bonus;
+
+END;
+GO
+SELECT
+    EmployeeID,
+    Salary,
+    dbo.fn_CalculateTotalCompensation(Salary)
+    AS TotalCompensation
+FROM Employees;
+GO
