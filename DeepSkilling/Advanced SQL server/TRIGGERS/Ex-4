@@ -1,0 +1,118 @@
+/* =====================================================
+   DROP TABLES IF EXIST
+   ===================================================== */
+
+IF OBJECT_ID('Employees', 'U') IS NOT NULL
+    DROP TABLE Employees;
+GO
+
+IF OBJECT_ID('Departments', 'U') IS NOT NULL
+    DROP TABLE Departments;
+GO
+
+/* =====================================================
+   CREATE DEPARTMENTS TABLE
+   ===================================================== */
+
+CREATE TABLE Departments
+(
+    DepartmentID INT PRIMARY KEY,
+    DepartmentName VARCHAR(100)
+);
+GO
+
+/* =====================================================
+   CREATE EMPLOYEES TABLE
+   ===================================================== */
+
+CREATE TABLE Employees
+(
+    EmployeeID INT PRIMARY KEY,
+    FirstName VARCHAR(50),
+    LastName VARCHAR(50),
+    DepartmentID INT,
+    Salary DECIMAL(10,2),
+    JoinDate DATE,
+
+    FOREIGN KEY (DepartmentID)
+    REFERENCES Departments(DepartmentID)
+);
+GO
+
+/* =====================================================
+   INSERT SAMPLE DATA
+   ===================================================== */
+
+INSERT INTO Departments
+VALUES
+(1,'HR'),
+(2,'Finance'),
+(3,'IT'),
+(4,'Marketing');
+GO
+
+INSERT INTO Employees
+VALUES
+(1,'John','Doe',1,5000.00,'2022-01-15'),
+(2,'Jane','Smith',2,6000.00,'2021-03-22'),
+(3,'Michael','Johnson',3,7000.00,'2020-07-30'),
+(4,'Emily','Davis',4,5500.00,'2019-11-05');
+GO
+
+/* =====================================================
+   VERIFY DATA
+   ===================================================== */
+
+SELECT * FROM Departments;
+GO
+
+SELECT * FROM Employees;
+GO
+CREATE TRIGGER trg_AfterSalaryUpdate
+ON Employees
+AFTER UPDATE
+AS
+BEGIN
+
+    INSERT INTO EmployeeChanges
+    (
+        EmployeeID,
+        OldSalary,
+        NewSalary
+    )
+    SELECT
+        d.EmployeeID,
+        d.Salary,
+        i.Salary
+    FROM deleted d
+    INNER JOIN inserted i
+    ON d.EmployeeID = i.EmployeeID;
+
+    PRINT 'Salary Updated Successfully';
+
+END;
+GO
+ALTER TRIGGER trg_AfterSalaryUpdate
+ON Employees
+AFTER UPDATE
+AS
+BEGIN
+
+    INSERT INTO EmployeeChanges
+    (
+        EmployeeID,
+        OldSalary,
+        NewSalary
+    )
+    SELECT
+        d.EmployeeID,
+        d.Salary,
+        i.Salary
+    FROM deleted d
+    INNER JOIN inserted i
+    ON d.EmployeeID = i.EmployeeID;
+
+    PRINT 'Salary Updated Successfully';
+
+END;
+GO
