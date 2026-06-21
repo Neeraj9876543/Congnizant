@@ -1,0 +1,418 @@
+/* =========================================================
+   SQL SERVER EXCEPTION HANDLING EXERCISES
+   EMPLOYEE MANAGEMENT SYSTEM
+
+   Includes:
+   1. Database Setup
+   2. Table Creation
+   3. Sample Data
+   4. Question 1 - TRY...CATCH Error Logging
+   5. Question 2 - THROW Re-raise Error
+   6. Question 3 - RAISERROR Custom Validation
+   7. Question 4 - Nested TRY...CATCH
+   8. Question 5 - Transaction + Rollback
+   9. Question 6 - Dynamic RAISERROR Severity
+   ========================================================= */
+
+
+/* =========================================================
+   STEP 1 : USE EXISTING DATABASE
+   (Using previous EmployeeManagement database)
+   ========================================================= */
+
+USE EmployeeManagement;
+GO
+
+
+/* =========================================================
+   STEP 2 : DROP OLD TABLES (Avoid duplicate errors)
+   ========================================================= */
+
+DROP TABLE IF EXISTS AuditLog;
+DROP TABLE IF EXISTS Employees;
+DROP TABLE IF EXISTS Departments;
+GO
+
+
+/* =========================================================
+   STEP 3 : CREATE TABLES
+   ========================================================= */
+
+
+/* Departments table */
+
+CREATE TABLE Departments
+(
+    DepartmentID INT PRIMARY KEY,
+    DepartmentName VARCHAR(100) NOT NULL
+);
+
+
+/* Employees table */
+
+CREATE TABLE Employees
+(
+    EmployeeID INT PRIMARY KEY,
+    FirstName VARCHAR(50),
+    LastName VARCHAR(50),
+    Email VARCHAR(100) UNIQUE,          -- Unique email
+    Salary DECIMAL(10,2),
+    DepartmentID INT,
+
+    FOREIGN KEY (DepartmentID)
+    REFERENCES Departments(DepartmentID)
+);
+
+
+/* Audit table for error logging */
+
+CREATE TABLE AuditLog
+(
+    LogID INT IDENTITY(1,1) PRIMARY KEY,
+    Action VARCHAR(100),
+    ErrorMessage VARCHAR(4000),
+    ActionDate DATETIME DEFAULT GETDATE()
+);
+GO
+
+
+/* =========================================================
+   STEP 4 : INSERT SAMPLE DATA
+   ========================================================= */
+
+INSERT INTO Departments VALUES
+(1,'HR'),
+(2,'IT'),
+(3,'Finance');
+
+
+INSERT INTO Employees VALUES
+(1,'John','Doe','john@gmail.com',5000,1),
+(2,'Jane','Smith','jane@gmail.com',6000,2);
+GO
+
+
+/* =========================================================
+   QUESTION 1
+   BASIC TRY...CATCH FOR ERROR LOGGING
+   If duplicate email occurs → log error
+   ========================================================= */
+
+CREATE PROCEDURE AddEmployee
+(
+    @EmployeeID INT,
+    @FirstName VARCHAR(50),
+    @LastName VARCHAR(50),
+    @Email VARCHAR(100),
+    @Salary DECIMAL(10,2),
+    @DepartmentID INT
+)
+AS
+BEGIN
+    BEGIN TRY
+
+        INSERT INTO Employees
+        VALUES(@EmployeeID,@FirstName,@LastName,
+               @Email,@Salary,@DepartmentID);
+
+        PRINT 'Employee Inserted Successfully';
+
+    END TRY
+
+    BEGIN CATCH
+
+        INSERT INTO AuditLog(Action,ErrorMessage)
+        VALUES('AddEmployee',ERROR_MESSAGE());
+
+        PRINT 'Error Logged';
+
+    END CATCH
+END
+GO
+
+
+/* Test duplicate email */
+
+EXEC AddEmployee
+3,'Mike','David','john@gmail.com',4500,1;
+GO
+
+
+
+/* =========================================================
+   QUESTION 2
+   THROW → Re-raise error after logging
+   ========================================================= */
+
+ALTER PROCEDURE AddEmployee
+(
+    @EmployeeID INT,
+    @FirstName VARCHAR(50),
+    @LastName VARCHAR(50),
+    @Email VARCHAR(100),
+    @Salary DECIMAL(10,2),
+    @DepartmentID INT
+)
+AS
+BEGIN
+    BEGIN TRY
+
+        INSERT INTO Employees
+        VALUES(@EmployeeID,@FirstName,@LastName,
+               @Email,@Salary,@DepartmentID);
+
+    END TRY
+
+    BEGIN CATCH
+
+        INSERT INTO AuditLog(Action,ErrorMessage)
+        VALUES('AddEmployee THROW',ERROR_MESSAGE());
+
+        THROW;          -- send error again
+
+    END CATCH
+END
+GO
+
+
+
+/* =========================================================
+   QUESTION 3
+   CUSTOM ERROR USING RAISERROR
+   Salary must be > 0
+   ========================================================= */
+
+ALTER PROCEDURE AddEmployee
+(
+    @EmployeeID INT,
+    @FirstName VARCHAR(50),
+    @LastName VARCHAR(50),
+    @Email VARCHAR(100),
+    @Salary DECIMAL(10,2),
+    @DepartmentID INT
+)
+AS
+BEGIN
+    BEGIN TRY
+
+        /* Validate salary */
+
+        IF @Salary <= 0
+        BEGIN
+            RAISERROR
+            ('Salary must be greater than zero',16,1);
+        END
+
+        INSERT INTO Employees
+        VALUES(@EmployeeID,@FirstName,@LastName,
+               @Email,@Salary,@DepartmentID);
+
+        PRINT 'Inserted';
+
+    END TRY
+
+    BEGIN CATCH
+
+        INSERT INTO AuditLog(Action,ErrorMessage)
+        VALUES('Salary Validation',ERROR_MESSAGE());
+
+        PRINT ERROR_MESSAGE();
+
+    END CATCH
+END
+GO
+
+
+/* Test */
+
+EXEC AddEmployee
+4,'Sam','Roy','sam@gmail.com',-500,1;
+GO
+
+
+
+/* =========================================================
+   QUESTION 4
+   NESTED TRY...CATCH WITH RAISERROR
+   Transfer employee to another department
+   ========================================================= */
+
+CREATE PROCEDURE TransferEmployee
+(
+    @EmployeeID INT,
+    @NewDepartmentID INT
+)
+AS
+BEGIN
+    BEGIN TRY
+
+        BEGIN TRY
+
+            /* Check department */
+
+            IF NOT EXISTS
+            (
+                SELECT * FROM Departments
+                WHERE DepartmentID=@NewDepartmentID
+            )
+            BEGIN
+                RAISERROR
+                ('Department does not exist',16,1);
+            END
+
+            UPDATE Employees
+            SET DepartmentID=@NewDepartmentID
+            WHERE EmployeeID=@EmployeeID;
+
+            PRINT 'Transfer Successful';
+
+        END TRY
+
+        BEGIN CATCH
+            THROW;
+        END CATCH
+
+    END TRY
+
+    BEGIN CATCH
+
+        INSERT INTO AuditLog(Action,ErrorMessage)
+        VALUES('TransferEmployee',ERROR_MESSAGE());
+
+        PRINT ERROR_MESSAGE();
+
+    END CATCH
+END
+GO
+
+
+/* Test invalid department */
+
+EXEC TransferEmployee 1,10;
+GO
+
+
+
+/* =========================================================
+   QUESTION 5
+   TRANSACTION + ROLLBACK + ERROR LOGGING
+   If one insert fails → rollback everything
+   ========================================================= */
+
+CREATE PROCEDURE BatchInsertEmployees
+AS
+BEGIN
+    BEGIN TRY
+
+        BEGIN TRANSACTION
+
+        INSERT INTO Employees VALUES
+        (5,'Alex','Tom','alex@gmail.com',5000,1);
+
+        /* Duplicate email → will fail */
+
+        INSERT INTO Employees VALUES
+        (6,'Chris','Paul','john@gmail.com',5500,2);
+
+        COMMIT TRANSACTION;
+
+        PRINT 'Batch Insert Successful';
+
+    END TRY
+
+    BEGIN CATCH
+
+        ROLLBACK TRANSACTION;
+
+        INSERT INTO AuditLog(Action,ErrorMessage)
+        VALUES('BatchInsert',ERROR_MESSAGE());
+
+        PRINT 'Transaction Rolled Back';
+
+    END CATCH
+END
+GO
+
+
+/* Run */
+
+EXEC BatchInsertEmployees;
+GO
+
+
+
+/* =========================================================
+   QUESTION 6
+   DYNAMIC RAISERROR WITH SEVERITY
+   Salary checks
+   ========================================================= */
+
+ALTER PROCEDURE AddEmployee
+(
+    @EmployeeID INT,
+    @FirstName VARCHAR(50),
+    @LastName VARCHAR(50),
+    @Email VARCHAR(100),
+    @Salary DECIMAL(10,2),
+    @DepartmentID INT
+)
+AS
+BEGIN
+
+    /* Warning */
+
+    IF @Salary < 1000 AND @Salary > 0
+    BEGIN
+        RAISERROR
+        ('Warning: Salary too low',10,1);
+    END
+
+
+    /* Serious error */
+
+    IF @Salary < 0
+    BEGIN
+        RAISERROR
+        ('Error: Negative salary not allowed',16,1);
+        RETURN;
+    END
+
+
+    INSERT INTO Employees
+    VALUES(@EmployeeID,@FirstName,@LastName,
+           @Email,@Salary,@DepartmentID);
+
+    PRINT 'Inserted Successfully';
+
+END
+GO
+
+
+/* Test warning */
+
+EXEC AddEmployee
+7,'Rahul','Kumar','rahul@gmail.com',500,1;
+GO
+
+
+/* Test error */
+
+EXEC AddEmployee
+8,'Aman','Sharma','aman@gmail.com',-100,1;
+GO
+
+
+
+/* =========================================================
+   VIEW DATA
+   Check logged errors
+   ========================================================= */
+
+SELECT * FROM Employees;
+SELECT * FROM AuditLog;
+GO
+
+
+/* =========================================================
+   PROGRAM COMPLETE
+   ========================================================= */
