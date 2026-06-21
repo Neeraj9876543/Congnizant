@@ -1,0 +1,68 @@
+using System;
+
+class Book
+{
+    public int BookId;
+    public string Title;
+    public string Author;
+
+    public Book(int id, string title, string author)
+    {
+        BookId = id;
+        Title = title;
+        Author = author;
+    }
+}
+
+class Program
+{
+    static int LinearSearch(Book[] books, string key)
+    {
+        for (int i = 0; i < books.Length; i++)
+        {
+            if (books[i].Title == key)
+                return i;
+        }
+        return -1;
+    }
+
+    static int BinarySearch(Book[] books, string key)
+    {
+        int low = 0;
+        int high = books.Length - 1;
+
+        while (low <= high)
+        {
+            int mid = (low + high) / 2;
+
+            int result = String.Compare(books[mid].Title, key);
+
+            if (result == 0)
+                return mid;
+
+            else if (result < 0)
+                low = mid + 1;
+
+            else
+                high = mid - 1;
+        }
+
+        return -1;
+    }
+
+    static void Main()
+    {
+        Book[] books =
+        {
+            new Book(1,"CSharp","Author1"),
+            new Book(2,"Java","Author2"),
+            new Book(3,"Python","Author3")
+        };
+
+        int a = LinearSearch(books, "Python");
+        Console.WriteLine("Linear Search Result: " + a);
+
+        int b = BinarySearch(books, "Python");
+        Console.WriteLine("Binary Search Result: " + b);
+    }
+}
