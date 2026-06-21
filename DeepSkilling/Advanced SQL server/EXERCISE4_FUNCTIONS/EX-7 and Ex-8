@@ -1,1 +1,10 @@
-
+SELECT
+    EmployeeID,
+    FirstName,
+    dbo.fn_CalculateAnnualSalary(Salary) AS AnnualSalary
+FROM Employees
+WHERE EmployeeID = 1;
+GO
+SELECT *
+FROM dbo.fn_GetEmployeesByDepartment(3);
+GO
