@@ -1,0 +1,37 @@
+using System;
+
+interface IPaymentProcessor
+{
+    void ProcessPayment(double amount);
+}
+
+class PaytmGateway
+{
+    public void Pay(double amount)
+    {
+        Console.WriteLine("Paid using Paytm: " + amount);
+    }
+}
+
+class PaytmAdapter : IPaymentProcessor
+{
+    private PaytmGateway paytm = new PaytmGateway();
+
+    public void ProcessPayment(double amount)
+    {
+        paytm.Pay(amount);
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        Console.Write("Enter payment amount: ");
+        double amount = Convert.ToDouble(Console.ReadLine());
+
+        IPaymentProcessor payment = new PaytmAdapter();
+
+        payment.ProcessPayment(amount);
+    }
+}
