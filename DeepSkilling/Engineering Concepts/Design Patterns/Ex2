@@ -1,0 +1,46 @@
+using System;
+
+interface IDocument
+{
+    void Open();
+}
+
+class PdfDocument : IDocument
+{
+    public void Open()
+    {
+        Console.WriteLine("PDF Document Opened");
+    }
+}
+
+class WordDocument : IDocument
+{
+    public void Open()
+    {
+        Console.WriteLine("Word Document Opened");
+    }
+}
+
+class DocumentFactory
+{
+    public static IDocument CreateDocument(string type)
+    {
+        if (type == "PDF")
+            return new PdfDocument();
+        else
+            return new WordDocument();
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        Console.Write("Enter document type (PDF/WORD): ");
+        string type = Console.ReadLine().ToUpper();
+
+        IDocument doc = DocumentFactory.CreateDocument(type);
+
+        doc.Open();
+    }
+}
