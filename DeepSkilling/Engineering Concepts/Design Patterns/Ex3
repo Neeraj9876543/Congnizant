@@ -1,0 +1,68 @@
+using System;
+
+class Computer
+{
+    public string CPU;
+    public string RAM;
+    public string Storage;
+
+    private Computer() { }
+
+    public class Builder
+    {
+        private Computer computer = new Computer();
+
+        public Builder SetCPU(string cpu)
+        {
+            computer.CPU = cpu;
+            return this;
+        }
+
+        public Builder SetRAM(string ram)
+        {
+            computer.RAM = ram;
+            return this;
+        }
+
+        public Builder SetStorage(string storage)
+        {
+            computer.Storage = storage;
+            return this;
+        }
+
+        public Computer Build()
+        {
+            return computer;
+        }
+    }
+
+    public void Show()
+    {
+        Console.WriteLine("CPU: " + CPU);
+        Console.WriteLine("RAM: " + RAM);
+        Console.WriteLine("Storage: " + Storage);
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        Console.Write("Enter CPU: ");
+        string cpu = Console.ReadLine();
+
+        Console.Write("Enter RAM: ");
+        string ram = Console.ReadLine();
+
+        Console.Write("Enter Storage: ");
+        string storage = Console.ReadLine();
+
+        Computer c = new Computer.Builder()
+                        .SetCPU(cpu)
+                        .SetRAM(ram)
+                        .SetStorage(storage)
+                        .Build();
+
+        c.Show();
+    }
+}
